@@ -31,6 +31,12 @@ void sendMessageForPlotter(Port_plotter* plotter, ...)
 	for(uint8_t i = 0; i<plotter->values_number; i++)
 	{
 		int32_t value = va_arg(factor, int32_t);
+		if(value<0)
+		{
+			value=-value;
+			plotter->tx_buffer[possition] = '-';
+			possition++;
+		}
 		uint32_t j = 10;
 		for(;value/j;j*=10);
 		j/=10;
