@@ -5,21 +5,46 @@
  *      Author: Морской шакал
  */
 
-#include "uart_port_plotter_interface.h"
+#include "port_plotter_interface.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
+#if USB_ENABLE
+#include "usbd_cdc_if.h"
+#endif
+
 #define MAX_VALUE_LENGTH 10
 #define ASCII_NUMBER_SHIFT 48
 
-Port_plotter initPortPlotter(UART_HandleTypeDef* huart, uint8_t values_number)
+Port_plotter initPortPlotter(uint8_t values_number, Channel plotter_channel, ...)
 {
+	va_list factor;
+	va_start(factor, plotter_channel);
 	Port_plotter new_plotter;
-	new_plotter.huart = huart;
+#ifdef HAL_UART_MODULE_ENABLED
+	UART_HandleTypeDef* huart;
+#endif
+	switch(plotter_channel)
+	{
+#ifdef HAL_UART_MODULE_ENABLED
+		case UART_CHANNEL:
+				huart = va_arg(factor, UART_HandleTypeDef*);
+				new_plotter.huart = huart;
+				break;
+#endif
+#if USB_ENABLE
+		case USB_CHANNEL:
+				break;
+#endif
+		default:
+				new_plotter.values_number = 0;
+				return new_plotter;
+	}
 	new_plotter.values_number = values_number;
 	new_plotter.tx_buffer = malloc(sizeof(uint8_t)*(MAX_VALUE_LENGTH+1)*values_number+1);
+	new_plotter.plotter_channel = plotter_channel;
 	return new_plotter;
 }
 void sendMessageForPlotter(Port_plotter* plotter, ...)
@@ -52,5 +77,17 @@ void sendMessageForPlotter(Port_plotter* plotter, ...)
 	possition--;
 	plotter->tx_buffer[possition] = ';';
 	va_end(factor);
-	HAL_UART_Transmit_IT(plotter->huart, plotter->tx_buffer, possition+1);
+	switch(plotter->plotter_channel)
+	{
+#ifdef HAL_UART_MODULE_ENABLED
+		case UART_CHANNEL:
+				HAL_UART_Transmit_IT(plotter->huart, plotter->tx_buffer, possition+1);
+				break;
+#endif
+#if USB_ENABLE		
+		case USB_CHANNEL:
+				CDC_Transmit_FS(plotter->tx_buffer, possition+1);
+				break;
+#endif
+	}
 }
