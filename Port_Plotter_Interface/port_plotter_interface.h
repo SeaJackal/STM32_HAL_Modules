@@ -17,9 +17,11 @@
 typedef enum
 {
 #ifdef HAL_UART_MODULE_ENABLED
-	#ifdef USB_ENABLE
+	#if USB_ENABLE
 		UART_CHANNEL,
 		USB_CHANNEL
+	#else
+		UART_CHANNEL
 	#endif
 #else
 	#ifdef HAL_UART_MODULE_ENABLED
